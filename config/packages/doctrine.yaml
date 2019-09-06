@@ -20,7 +20,7 @@ doctrine:
                 charset: utf8mb4
             customer:
                 # configure these for your database server
-                url: '%env(DATABASE_CUSTOMER_URL)%'
+                url: '%env(DATABASE_CUSTOM_URL)%'
                 driver: 'pdo_mysql'
                 server_version: '5.7'
                 charset: utf8mb4
@@ -47,7 +47,7 @@ doctrine:
                         dir: '%kernel.project_dir%/src/Entity'
                         prefix: 'App\Entity'
                         alias: Main
-            customer:
+            custom:
                 connection: customer
                 mappings:
                     Customer:
@@ -55,4 +55,4 @@ doctrine:
                         type: annotation
                         dir: '%kernel.project_dir%/src/Entity'
                         prefix: 'App\Entity'
-                        alias: Customer
+                        alias: Custom
