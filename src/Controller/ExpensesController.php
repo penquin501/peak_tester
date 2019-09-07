@@ -12,39 +12,61 @@ class ExpensesController extends AbstractController
     /**
      * @Route("/expenses/check/billing", name="expenses")
      */
-    public function expensesCheckBilling(EntityManagerInterface $entityManager,Request $request)
+    public function expensesCheckBilling(EntityManagerInterface $entityManager, Request $request)
     {
         $entityManager = $this->getDoctrine()->getManager('default');
         $customEntityManager = $this->getDoctrine()->getManager('custom');
 
-        $sqlPeakRequest="SELECT bill_no, json_send, json_result ".
-                        "FROM peak_prepare_to_send ".
-                        "WHERE peak_method='expenses' AND DATE(recorddate)>='2019-09-04'";
-        $billNoToPrepare=$entityManager->getConnection()->query($sqlPeakRequest);
-        $dataPeak=json_decode($this->json($billNoToPrepare)->getContent(),true);
+        $sqlPeakRequest = "SELECT bill_no, json_send, json_result " .
+                          "FROM peak_prepare_to_send " .
+                          "WHERE peak_method='expenses' AND DATE(recorddate)>='2019-09-04'";
+        $billNoToPrepare = $entityManager->getConnection()->query($sqlPeakRequest);
+        $dataPeak = json_decode($this->json($billNoToPrepare)->getContent(), true);
 
 //        dd($dataPeak);
         foreach ($dataPeak as $item) {
-            $dataJsonSend=json_decode($item['json_send'],true);
-            dd($dataJsonSend['PeakExpenses']['expenses']);
-            foreach($dataJsonSend['PeakExpenses']['expenses'] as $itemExpenses) {
-//                dd($itemExpenses['tags'][1]);
-                $strBillNo=$itemExpenses['tags'][1];
-                $exBillNo=explode("|",$strBillNo);
-//                dd($exBillNo[1]);
-            }
+            $dataJsonSend = json_decode($item['json_send'], true);
+            $dataJsonPeak = json_decode($item['json_result'], true);
+//            dd($dataJsonPeak['PeakExpenses']['expenses']);
+            foreach ($dataJsonSend['PeakExpenses']['expenses'] as $itemExpenses) {
+                $code = $itemExpenses['code'];//code
+                $issuedDate = $itemExpenses['issuedDate'];
 
-//            $sqlMerchantBilling = "SELECT mb.parcel_bill_no,SUM(mb.payment_amt) as sumPayAmt,SUM(mb.payment_discount) as sumDiscount,Sum(mb.transportprice) as sumTransPrice,SUM(md.productcost) as sumCost " .
-//                "FROM merchant_billing mb " .
-//                "JOIN merchant_billing_detail md " .
-//                "ON mb.takeorderby=md.takeorderby and mb.payment_invoice=md.payment_invoice " .
-//                "WHERE mb.parcel_bill_no = '" . $item['bill_no']."'";
-//            $merchantBillingInfo=$entityManager->getConnection()->query($sqlMerchantBilling);
-//            $dataMerchantBilling=json_decode($this->json($merchantBillingInfo)->getContent(),true);
+                $strBillNo = $itemExpenses['tags'][1];
+                $exBillNo = explode("|", $strBillNo);//billNo
+//                dd($exBillNo[1]);
+                $strShopName = $itemExpenses['tags'][3];
+                $exShopName = explode("|", $strShopName);//shopName
+//                dd($exShopName[1]);
+                $strDeliveryFee = $itemExpenses['tags'][4];
+                $exDeliveryFee = explode("|", $strDeliveryFee);//DeliveryFee
+                //dd($exDeliveryFee[1]);
+                $accountCode = $itemExpenses['paidPayments']['payments'][1]['accountCode'];
+                $amount = $itemExpenses['paidPayments']['payments'][1]['amount'];
+
+            }
+            foreach ($dataJsonPeak['PeakExpenses']['expenses'] as $itemReponse) {
+//                dd($itemReponse['resCode']);
+
+                if($itemReponse['resCode']!=200){
+
+
+                } else {
+                    $status = $itemReponse['status'];
+                    $preTaxAmount = $itemReponse['preTaxAmount'];
+                    $vatAmount = $itemReponse['vatAmount'];
+                    $netAmount = $itemReponse['netAmount'];
+                    $paymentAmount = $itemReponse['paymentAmount'];
+                    $onlineViewLink = $itemReponse['onlineViewLink'];
+                    $resCode = $itemReponse['resCode'];
+                }
+
+            }
+//            $insertSql="";
+            dd($exBillNo[1],$exShopName[1],$exDeliveryFee[1]);
 
         }
-//        dd($exBillNo[1]);//ใช้ได้
-        $output=['billNo'=>$exBillNo[1]];
+        $output = ['billNo' => $amount];
         return $this->json($output);
     }
 }
