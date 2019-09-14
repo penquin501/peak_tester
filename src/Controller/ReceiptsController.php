@@ -24,11 +24,11 @@ class ReceiptsController extends AbstractController
         $dataPeak = json_decode($this->json($billNoToPrepare)->getContent(), true);
 
         foreach ($dataPeak as $item) {
-//            dd($item['bill_no']);
+
             $sqlParcelTest = "SELECT bill_no FROM receipts WHERE bill_no='" . $item['bill_no'] . "'";
             $billNoExisted = $customEntityManager->getConnection()->query($sqlParcelTest);
             $dataBillNoExisted = json_decode($this->json($billNoExisted)->getContent(), true);
-//            dd($dataBillNoExisted[0]);
+
             if ($dataBillNoExisted == null || $dataBillNoExisted == '') {
                 $dataJsonSend = json_decode($item['json_send'], true);
                 $dataJsonPeak = json_decode($item['json_result'], true);
@@ -37,10 +37,14 @@ class ReceiptsController extends AbstractController
 
                     $code = $itemReceipts['code'];//code
                     $issuedDate = $itemReceipts['issuedDate'];
-                    $changeToDate = $this->convertIssuedToDate($issuedDate);
+                    $dueDate = $itemReceipts['dueDate'];
+                    $issueDateToDate = $this->convertStrToDate($issuedDate);
+                    $dueDateToDate = $this->convertStrToDate($dueDate);
 
                     $strBillNo = $itemReceipts['tags'][1];
                     $exBillNo = explode("|", $strBillNo);//$exBillNo[1]
+
+                    $merId=explode("-",$exBillNo[1]);//merId[0]
 
                     $strShopName = $itemReceipts['tags'][3];
                     $exShopName = explode("|", $strShopName);//$exShopName[1]
@@ -51,15 +55,15 @@ class ReceiptsController extends AbstractController
 
                 if ($dataJsonPeak == '' || !is_array($dataJsonPeak)) {
                     $result = "No JSON Result";
-                    $insertQuery = "INSERT INTO receipts(code, issued_date, bill_no, shop_name, amount_send,result,record_date) " .
-                        "VALUES ('" . $code . "','" . $changeToDate . "','" . $exBillNo[1] . "','" . $exShopName[1] . "'," . $amount . ",'" . $result . "',CURRENT_TIMESTAMP())";
+                    $insertQuery = "INSERT INTO receipts(code, issued_date, bill_no, mer_id, shop_name, amount_send,peak_due_date,result,record_date) " .
+                        "VALUES ('" . $code . "','" . $issueDateToDate . "','" . $exBillNo[1] . "',".$merId[0].",'" . $exShopName[1] . "'," . $amount . ",'".$dueDateToDate."','" . $result . "',CURRENT_TIMESTAMP())";
                 } else {
                     $result = "Error Peak Msg";
                     $peakResDescResult = $dataJsonPeak['PeakReceipts']['resDesc'];
 
                     if ($dataJsonPeak['PeakReceipts']['resCode'] != 200) {
-                        $insertQuery = "INSERT INTO receipts(code, issued_date, bill_no, shop_name, amount_send,peak_res_code,peak_res_desc,result,record_date) " .
-                            "VALUES ('" . $code . "','" . $changeToDate . "','" . $exBillNo[1] . "','" . $exShopName[1] . "'," . $amount . ",'" . $dataJsonPeak['PeakReceipts']['resCode'] . "','" . $peakResDescResult . "','" . $result . "',CURRENT_TIMESTAMP()";
+                        $insertQuery = "INSERT INTO receipts(code, issued_date, bill_no,mer_id, shop_name, amount_send,peak_due_date,peak_res_code,peak_res_desc,result,record_date) " .
+                            "VALUES ('" . $code . "','" . $issueDateToDate . "','" . $exBillNo[1] . "',".$merId[0].",'" . $exShopName[1] . "'," . $amount . ",'".$dueDateToDate."','" . $dataJsonPeak['PeakReceipts']['resCode'] . "','" . $peakResDescResult . "','" . $result . "',CURRENT_TIMESTAMP()";
 
                     } else {
 
@@ -67,8 +71,8 @@ class ReceiptsController extends AbstractController
 
                             if ($itemReponse['resCode'] != 200) {
 //                            $result="Error Peak Msg";
-                                $insertQuery = "INSERT INTO receipts(code, issued_date, bill_no, shop_name, amount_send,peak_res_code,peak_res_desc,peak_code,peak_desc,result,record_date) " .
-                                    "VALUES ('" . $code . "','" . $changeToDate . "','" . $exBillNo[1] . "','" . $exShopName[1] . "'," . $amount . ",'" . $dataJsonPeak['PeakReceipts']['resCode'] . "','" . $peakResDescResult . "','" . $itemReponse['resCode'] . "','" . $itemReponse['resDesc'] . "','" . $result . "',CURRENT_TIMESTAMP())";
+                                $insertQuery = "INSERT INTO receipts(code, issued_date, bill_no,mer_id, shop_name, amount_send,peak_due_date,peak_res_code,peak_res_desc,peak_code,peak_desc,result,record_date) " .
+                                    "VALUES ('" . $code . "','" . $issueDateToDate . "','" . $exBillNo[1] . "',".$merId[0].",'" . $exShopName[1] . "'," . $amount . ",'".$dueDateToDate."','" . $dataJsonPeak['PeakReceipts']['resCode'] . "','" . $peakResDescResult . "','" . $itemReponse['resCode'] . "','" . $itemReponse['resDesc'] . "','" . $result . "',CURRENT_TIMESTAMP())";
 
                             } else {
 
@@ -84,8 +88,8 @@ class ReceiptsController extends AbstractController
                                 } else {
                                     $result = "Correct";
                                 }
-                                $insertQuery = "INSERT INTO receipts(code, issued_date, bill_no, shop_name, amount_send,amount_peak,peak_res_code,peak_res_desc,peak_code,peak_desc,peak_status,peak_online_link,result,record_date) " .
-                                    "VALUES ('" . $code . "','" . $changeToDate . "','" . $exBillNo[1] . "','" . $exShopName[1] . "'," . $amount . "," . $paymentAmount . ",'" . $dataJsonPeak['PeakReceipts']['resCode'] . "','" . $peakResDescResult . "','" . $itemReponse['resCode'] . "','" . $itemReponse['resDesc'] . "','" . $status . "','" . $onlineViewLink . "','" . $result . "',CURRENT_TIMESTAMP())";
+                                $insertQuery = "INSERT INTO receipts(code, issued_date, bill_no,mer_id, shop_name, amount_send,amount_peak,peak_due_date,peak_res_code,peak_res_desc,peak_code,peak_desc,peak_status,peak_online_link,result,record_date) " .
+                                    "VALUES ('" . $code . "','" . $issueDateToDate . "','" . $exBillNo[1] . "',".$merId[0].",'" . $exShopName[1] . "'," . $amount . "," . $paymentAmount . ",'".$dueDateToDate."','" . $dataJsonPeak['PeakReceipts']['resCode'] . "','" . $peakResDescResult . "','" . $itemReponse['resCode'] . "','" . $itemReponse['resDesc'] . "','" . $status . "','" . $onlineViewLink . "','" . $result . "',CURRENT_TIMESTAMP())";
 
                             }
 
@@ -97,7 +101,7 @@ class ReceiptsController extends AbstractController
                 $customEntityManager->getConnection()->query($insertQuery);
             } else {
 
-                $output=['status'=>'test'];
+                $output=['status'=>'No bill No to check'];
             }
         }
         $sqlBillNoError = "SELECT bill_no,peak_res_code,peak_res_desc,peak_code,peak_desc,peak_status,peak_online_link " .
@@ -117,7 +121,7 @@ class ReceiptsController extends AbstractController
         return $this->json($output);
     }
 
-    public function convertIssuedToDate($issueDate)
+    public function convertStrToDate($issueDate)
     {
         $splIssueDate = str_split($issueDate);
         $years = '';
