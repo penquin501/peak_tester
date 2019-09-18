@@ -9,114 +9,109 @@ use Symfony\Component\Routing\Annotation\Route;
 class ReceiptsController extends AbstractController
 {
     /**
-     * @Route("/check/receipts/", name="receipts")
+     * @Route("/save/receipts/info")
      */
-    public function checkReceipts(Request $request)
+    public function saveReceiptsInfo(Request $request)
     {
+        $datePrepare = $request->query->get('datePrepare');
+        $testDate=$this->convertStrToDate($datePrepare);
+        $nextDate=date('Y-m-d',strtotime("+1 day",strtotime($testDate)));
+//        dd($testDate,$nextDate);
         $entityManager = $this->getDoctrine()->getManager('default');
         $customEntityManager = $this->getDoctrine()->getManager('custom');
 
-        $sqlPeakRequest = "SELECT bill_no, json_send, json_result " .
-            "FROM peak_prepare_to_send " .
-            "WHERE peak_method='receipts' " .
+        $sqlParcelTest = "SELECT bill_no FROM receipts";
+        $billNoExisted = $customEntityManager->getConnection()->query($sqlParcelTest);
+        $dataBillNoExisted = json_decode($this->json($billNoExisted)->getContent(), true);
+
+        $strBillExisted = '';
+        foreach ($dataBillNoExisted as $billNo) {
+            $strBillExisted .= "'" . $billNo['bill_no'] . "',";
+        }
+        $billNoTested = rtrim($strBillExisted, ", ");//cut comma at last string
+
+        $sqlPeakRequest = "SELECT bill_no,peak_status,json_send,json_result,item_date FROM peak_prepare_to_send " .
+            "WHERE peak_method='receipts' AND (item_date >= DATE('".$testDate."') AND item_date < DATE('".$nextDate."')) " .
+            "AND bill_no NOT IN (" . $billNoTested . ") " .
             "ORDER BY recorddate DESC";
+//        $sqlPeakRequest = "SELECT bill_no, json_send, json_result FROM peak_prepare_to_send WHERE peak_method='receipts' AND bill_no='89-835-190610152214-275'";
         $billNoToPrepare = $entityManager->getConnection()->query($sqlPeakRequest);
         $dataPeak = json_decode($this->json($billNoToPrepare)->getContent(), true);
 
-        foreach ($dataPeak as $item) {
+        if ($dataPeak == null || $dataPeak == []) {
+            $output = ['status' => 'Error No Data'];
+        } else {
 
-            $sqlParcelTest = "SELECT bill_no FROM receipts WHERE bill_no='" . $item['bill_no'] . "'";
-            $billNoExisted = $customEntityManager->getConnection()->query($sqlParcelTest);
-            $dataBillNoExisted = json_decode($this->json($billNoExisted)->getContent(), true);
-
-            if ($dataBillNoExisted == null || $dataBillNoExisted == '') {
-                $dataJsonSend = json_decode($item['json_send'], true);
-                $dataJsonPeak = json_decode($item['json_result'], true);
-
-                foreach ($dataJsonSend['PeakReceipts']['receipts'] as $itemReceipts) {
-
-                    $code = $itemReceipts['code'];//code
-                    $issuedDate = $itemReceipts['issuedDate'];
-                    $dueDate = $itemReceipts['dueDate'];
-                    $issueDateToDate = $this->convertStrToDate($issuedDate);
-                    $dueDateToDate = $this->convertStrToDate($dueDate);
-
-                    $strBillNo = $itemReceipts['tags'][1];
-                    $exBillNo = explode("|", $strBillNo);//$exBillNo[1]
-
-                    $merId=explode("-",$exBillNo[1]);//merId[0]
-
-                    $strShopName = $itemReceipts['tags'][3];
-                    $exShopName = explode("|", $strShopName);//$exShopName[1]
-
-                    $amount = $itemReceipts['paidPayments']['payments'][0]['amount'];
-
-                }
-
-                if ($dataJsonPeak == '' || !is_array($dataJsonPeak)) {
-                    $result = "No JSON Result";
-                    $insertQuery = "INSERT INTO receipts(code, issued_date, bill_no, mer_id, shop_name, amount_send,peak_due_date,result,record_date) " .
-                        "VALUES ('" . $code . "','" . $issueDateToDate . "','" . $exBillNo[1] . "',".$merId[0].",'" . $exShopName[1] . "'," . $amount . ",'".$dueDateToDate."','" . $result . "',CURRENT_TIMESTAMP())";
+            foreach ($dataPeak as $item) {
+                if ($item['peak_status'] == 'error') {
+                    $result = 'Error Peak Not Response';
+                    $insertQuery = "INSERT INTO receipts(bill_no, result,record_date) " .
+                        "VALUES ('" . $item['bill_no'] . "','" . $result . "',CURRENT_TIMESTAMP())";
+                    $customEntityManager->getConnection()->query($insertQuery);
                 } else {
-                    $result = "Error Peak Msg";
-                    $peakResDescResult = $dataJsonPeak['PeakReceipts']['resDesc'];
+                    $dataJsonSend = json_decode($item['json_send'], true);
+                    $dataJsonPeak = json_decode($item['json_result'], true);
 
-                    if ($dataJsonPeak['PeakReceipts']['resCode'] != 200) {
-                        $insertQuery = "INSERT INTO receipts(code, issued_date, bill_no,mer_id, shop_name, amount_send,peak_due_date,peak_res_code,peak_res_desc,result,record_date) " .
-                            "VALUES ('" . $code . "','" . $issueDateToDate . "','" . $exBillNo[1] . "',".$merId[0].",'" . $exShopName[1] . "'," . $amount . ",'".$dueDateToDate."','" . $dataJsonPeak['PeakReceipts']['resCode'] . "','" . $peakResDescResult . "','" . $result . "',CURRENT_TIMESTAMP()";
+                    foreach ($dataJsonSend['PeakReceipts']['receipts'] as $itemReceipts) {
 
+                        $code = $itemReceipts['code'];//code
+                        $issuedDate = $itemReceipts['issuedDate'];
+                        $dueDate = $itemReceipts['dueDate'];
+                        $issueDateToDate = $this->convertStrToDate($issuedDate);
+                        $dueDateToDate = $this->convertStrToDate($dueDate);
+
+                        $strBillNo = $itemReceipts['tags'][1];
+                        $exBillNo = explode("|", $strBillNo);//$exBillNo[1]
+
+                        $merId = explode("-", $exBillNo[1]);//merId[0]
+
+                        $strShopName = $itemReceipts['tags'][3];
+                        $exShopName = explode("|", $strShopName);//$exShopName[1]
+
+                        $amount = $itemReceipts['paidPayments']['payments'][0]['amount'];
+
+                        foreach ($itemReceipts['products'] as $product) {
+                            $insertProductItem = "INSERT INTO receipts_send_item(bill_no,item_date, product_id, quantity, product_price, send_peak_price, price) VALUES " .
+                                "('" . $exBillNo[1] . "','".$issuedDate."','" . $product['productId'] . "'," . $product['quantity'] . "," . $product['productprice'] . "," . $product['peak_price'] . "," . $product['price'] . ")";
+                            $customEntityManager->getConnection()->query($insertProductItem);
+                        }
+                    }
+
+                    if ($dataJsonPeak == '' || !is_array($dataJsonPeak)) {
+                        $insertQuery = "INSERT INTO receipts(code, issued_date, bill_no, mer_id, shop_name, amount_send,peak_due_date,record_date) " .
+                            "VALUES ('" . $code . "','" . $issueDateToDate . "','" . $exBillNo[1] . "'," . $merId[0] . ",'" . $exShopName[1] . "'," . $amount . ",'" . $dueDateToDate . "',CURRENT_TIMESTAMP())";
+                    } elseif ($dataJsonPeak['PeakReceipts']['resCode'] != 200) {
+                        $insertQuery = "INSERT INTO receipts(code, issued_date, bill_no,mer_id, shop_name, amount_send,peak_due_date,peak_res_code,peak_res_desc,record_date) " .
+                            "VALUES ('" . $code . "','" . $issueDateToDate . "','" . $exBillNo[1] . "'," . $merId[0] . ",'" . $exShopName[1] . "'," . $amount . ",'" . $dueDateToDate . "','" . $dataJsonPeak['PeakReceipts']['resCode'] . "','" . $dataJsonPeak['PeakReceipts']['resDesc'] . "',CURRENT_TIMESTAMP()";
                     } else {
-
                         foreach ($dataJsonPeak['PeakReceipts']['receipts'] as $itemReponse) {
-
                             if ($itemReponse['resCode'] != 200) {
-//                            $result="Error Peak Msg";
-                                $insertQuery = "INSERT INTO receipts(code, issued_date, bill_no,mer_id, shop_name, amount_send,peak_due_date,peak_res_code,peak_res_desc,peak_code,peak_desc,result,record_date) " .
-                                    "VALUES ('" . $code . "','" . $issueDateToDate . "','" . $exBillNo[1] . "',".$merId[0].",'" . $exShopName[1] . "'," . $amount . ",'".$dueDateToDate."','" . $dataJsonPeak['PeakReceipts']['resCode'] . "','" . $peakResDescResult . "','" . $itemReponse['resCode'] . "','" . $itemReponse['resDesc'] . "','" . $result . "',CURRENT_TIMESTAMP())";
+                                $insertQuery = "INSERT INTO receipts(code, issued_date, bill_no,mer_id, shop_name, amount_send,peak_due_date,peak_res_code,peak_res_desc,peak_code,peak_desc,record_date) " .
+                                    "VALUES ('" . $code . "','" . $issueDateToDate . "','" . $exBillNo[1] . "'," . $merId[0] . ",'" . $exShopName[1] . "'," . $amount . ",'" . $dueDateToDate . "','" . $dataJsonPeak['PeakReceipts']['resCode'] . "','" . $dataJsonPeak['PeakReceipts']['resDesc'] . "','" . $itemReponse['resCode'] . "','" . $itemReponse['resDesc'] . "',CURRENT_TIMESTAMP())";
 
                             } else {
-
                                 $status = $itemReponse['status'];
-//                            $preTaxAmount = $itemReponse['preTaxAmount'];
-//                            $vatAmount = $itemReponse['vatAmount'];
-//                            $netAmount = $itemReponse['netAmount'];
                                 $paymentAmount = $itemReponse['paymentAmount'];
                                 $onlineViewLink = $itemReponse['onlineViewLink'];
 
-                                if ($amount != $paymentAmount) {
-                                    $result = "Error Amount Not Match";
-                                } else {
-                                    $result = "Correct";
-                                }
-                                $insertQuery = "INSERT INTO receipts(code, issued_date, bill_no,mer_id, shop_name, amount_send,amount_peak,peak_due_date,peak_res_code,peak_res_desc,peak_code,peak_desc,peak_status,peak_online_link,result,record_date) " .
-                                    "VALUES ('" . $code . "','" . $issueDateToDate . "','" . $exBillNo[1] . "',".$merId[0].",'" . $exShopName[1] . "'," . $amount . "," . $paymentAmount . ",'".$dueDateToDate."','" . $dataJsonPeak['PeakReceipts']['resCode'] . "','" . $peakResDescResult . "','" . $itemReponse['resCode'] . "','" . $itemReponse['resDesc'] . "','" . $status . "','" . $onlineViewLink . "','" . $result . "',CURRENT_TIMESTAMP())";
+                                foreach ($itemReponse['products'] as $productPeak) {
+                                    $insertProductPeakItem = "INSERT INTO receipts_peak_item(bill_no,item_date,peak_id, product_id, product_code, quantity, price, discount) VALUES " .
+                                        "('" . $exBillNo[1] . "',".$issuedDate.",'" . $productPeak['id'] . "','" . $productPeak['productId'] . "','" . $productPeak['productCode'] . "'," . $productPeak['quantity'] . "," . $productPeak['price'] . "," . $productPeak['discount'] . ")";
 
+                                    $customEntityManager->getConnection()->query($insertProductPeakItem);
+                                }
+                                $insertQuery = "INSERT INTO receipts(code, issued_date, bill_no,mer_id, shop_name, amount_send,amount_peak,peak_due_date,peak_res_code,peak_res_desc,peak_code,peak_desc,peak_status,peak_online_link,record_date) " .
+                                    "VALUES ('" . $code . "','" . $issueDateToDate . "','" . $exBillNo[1] . "'," . $merId[0] . ",'" . $exShopName[1] . "'," . $amount . "," . $paymentAmount . ",'" . $dueDateToDate . "','" . $dataJsonPeak['PeakReceipts']['resCode'] . "','" . $dataJsonPeak['PeakReceipts']['resDesc'] . "','" . $itemReponse['resCode'] . "','" . $itemReponse['resDesc'] . "','" . $status . "','" . $onlineViewLink . "',CURRENT_TIMESTAMP())";
+
+                                $output = ['status' => 'SUCCESS'];
                             }
 
                         }
                     }
-
+                    $customEntityManager->getConnection()->query($insertQuery);
                 }
 
-                $customEntityManager->getConnection()->query($insertQuery);
-            } else {
-
-                $output=['status'=>'No bill No to check'];
             }
-        }
-        $sqlBillNoError = "SELECT bill_no,peak_res_code,peak_res_desc,peak_code,peak_desc,peak_status,peak_online_link " .
-            "FROM receipts " .
-            "WHERE result!='Correct'" .
-            "ORDER BY record_date ASC";
-        $billNoError = $customEntityManager->getConnection()->query($sqlBillNoError);
-        $dataBillNoError = json_decode($this->json($billNoError)->getContent(), true);
-
-        if ($dataBillNoError == []) {
-            $output = ['status' => 'SUCCESS'];
-        } else {
-            $output = ['status' => 'ERROR',
-                'data' => $dataBillNoError
-            ];
         }
         return $this->json($output);
     }
@@ -138,5 +133,22 @@ class ReceiptsController extends AbstractController
             $days .= $splIssueDate[$d];
         }
         return date("Y-m-d", strtotime($years . '-' . $months . '-' . $days));
+    }
+
+    /**
+     * @Route("/check/receipts/info")
+     */
+    public function checkReceiptsInfo(Request $request)
+    {
+//        $entityManager = $this->getDoctrine()->getManager('default');
+        $customEntityManager = $this->getDoctrine()->getManager('custom');
+        $sqlPeakRequest = "SELECT * FROM receipts where result is null";
+        $billNotTest = $customEntityManager->getConnection()->query($sqlPeakRequest);
+        $dataExisted = json_decode($this->json($billNotTest)->getContent(), true);
+
+//        dd($dataExisted);
+        foreach($dataExisted as $item){
+            dd($item);
+        }
     }
 }
