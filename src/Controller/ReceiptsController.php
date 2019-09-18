@@ -13,9 +13,9 @@ class ReceiptsController extends AbstractController
      */
     public function saveReceiptsInfo(Request $request)
     {
-        $datePrepare = $request->query->get('datePrepare');
-        $testDate=$this->convertStrToDate($datePrepare);
-        $nextDate=date('Y-m-d',strtotime("+1 day",strtotime($testDate)));
+//        $datePrepare = $request->query->get('datePrepare');
+//        $testDate=$this->convertStrToDate($datePrepare);
+//        $nextDate=date('Y-m-d',strtotime("+1 day",strtotime($testDate)));
 //        dd($testDate,$nextDate);
         $entityManager = $this->getDoctrine()->getManager('default');
         $customEntityManager = $this->getDoctrine()->getManager('custom');
@@ -31,7 +31,8 @@ class ReceiptsController extends AbstractController
         $billNoTested = rtrim($strBillExisted, ", ");//cut comma at last string
 
         $sqlPeakRequest = "SELECT bill_no,peak_status,json_send,json_result,item_date FROM peak_prepare_to_send " .
-            "WHERE peak_method='receipts' AND (item_date >= DATE('".$testDate."') AND item_date < DATE('".$nextDate."')) " .
+            "WHERE peak_method='receipts' ".
+//            "AND (item_date >= DATE('".$testDate."') AND item_date < DATE('".$nextDate."')) " .
             "AND bill_no NOT IN (" . $billNoTested . ") " .
             "ORDER BY recorddate DESC";
 //        $sqlPeakRequest = "SELECT bill_no, json_send, json_result FROM peak_prepare_to_send WHERE peak_method='receipts' AND bill_no='89-835-190610152214-275'";
