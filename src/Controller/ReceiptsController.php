@@ -15,7 +15,7 @@ class ReceiptsController extends AbstractController
     {
         $datePrepare = $request->query->get('datePrepare');
         $testDate=$this->convertStrToDate($datePrepare);
-        $nextDate=date('Y-m-d',strtotime("+30 day",strtotime($testDate)));
+        $nextDate=date('Y-m-d',strtotime("+1 day",strtotime($testDate)));
 //        dd($testDate,$nextDate);
         $entityManager = $this->getDoctrine()->getManager('default');
         $customEntityManager = $this->getDoctrine()->getManager('custom');
