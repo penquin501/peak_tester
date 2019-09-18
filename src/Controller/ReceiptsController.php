@@ -32,6 +32,7 @@ class ReceiptsController extends AbstractController
 
         $sqlPeakRequest = "SELECT bill_no,peak_status,json_send,json_result,item_date FROM peak_prepare_to_send " .
             "WHERE peak_method='receipts' ".
+            "AND bill_no != '135-948-190802104651-740' ".
 //            "AND (item_date >= DATE('".$testDate."') AND item_date < DATE('".$nextDate."')) " .
             "AND bill_no NOT IN (" . $billNoTested . ") " .
             "ORDER BY recorddate DESC";
