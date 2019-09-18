@@ -32,9 +32,9 @@ class ReceiptsController extends AbstractController
 
         $sqlPeakRequest = "SELECT bill_no,peak_status,json_send,json_result,item_date FROM peak_prepare_to_send " .
             "WHERE peak_method='receipts' ".
-            "AND bill_no != '135-948-190802104651-740' ".
+//            "AND bill_no != '135-948-190802104651-740' ".
 //            "AND (item_date >= DATE('".$testDate."') AND item_date < DATE('".$nextDate."')) " .
-            "AND bill_no NOT IN (" . $billNoTested . ") " .
+            "AND bill_no NOT IN ('135-948-190802104651-740'," . $billNoTested . ") " .
             "ORDER BY recorddate DESC";
 //        $sqlPeakRequest = "SELECT bill_no, json_send, json_result FROM peak_prepare_to_send WHERE peak_method='receipts' AND bill_no='89-835-190610152214-275'";
         $billNoToPrepare = $entityManager->getConnection()->query($sqlPeakRequest);
