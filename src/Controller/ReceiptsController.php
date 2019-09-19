@@ -9,7 +9,7 @@ use Symfony\Component\Routing\Annotation\Route;
 class ReceiptsController extends AbstractController
 {
     /**
-     * @Route("/save/receipts/info")
+     * @Route("/save/receipts/info",name="save_receipts")
      */
     public function saveReceiptsInfo(Request $request)
     {
@@ -84,6 +84,7 @@ class ReceiptsController extends AbstractController
                     } elseif ($dataJsonPeak['PeakReceipts']['resCode'] != 200) {
                         $insertQuery = "INSERT INTO receipts(code, issued_date, bill_no,mer_id, shop_name, amount_send,peak_due_date,peak_res_code,peak_res_desc,record_date) " .
                             "VALUES ('" . $code . "','" . $issueDateToDate . "','" . $exBillNo[1] . "'," . $merId[0] . ",'" . $exShopName[1] . "'," . $amount . ",'" . $dueDateToDate . "','" . $dataJsonPeak['PeakReceipts']['resCode'] . "','" . $dataJsonPeak['PeakReceipts']['resDesc'] . "',CURRENT_TIMESTAMP()";
+
                     } else {
                         foreach ($dataJsonPeak['PeakReceipts']['receipts'] as $itemReponse) {
                             if ($itemReponse['resCode'] != 200) {
@@ -137,7 +138,7 @@ class ReceiptsController extends AbstractController
     }
 
     /**
-     * @Route("/check/receipts/info")
+     * @Route("/check/receipts/info",name="check_receipts")
      */
     public function checkReceiptsInfo(Request $request)
     {
