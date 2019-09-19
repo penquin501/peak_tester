@@ -14,9 +14,9 @@ class ReceiptsController extends AbstractController
     public function saveReceiptsInfo(Request $request)
     {
         $datePrepare = $request->query->get('datePrepare');
-        $testDate=$this->convertStrToDate($datePrepare);
-        $nextDate=date('Y-m-d',strtotime("+1 day",strtotime($testDate)));
-//        dd($testDate,$nextDate);
+        $testDate = $this->convertStrToDate($datePrepare);
+        $nextDate = date('Y-m-d', strtotime("+1 day", strtotime($testDate)));
+
         $entityManager = $this->getDoctrine()->getManager('default');
         $customEntityManager = $this->getDoctrine()->getManager('custom');
 
@@ -31,14 +31,14 @@ class ReceiptsController extends AbstractController
         $billNoTested = rtrim($strBillExisted, ", ");//cut comma at last string
 
         $sqlPeakRequest = "SELECT bill_no,peak_status,json_send,json_result,item_date FROM peak_prepare_to_send " .
-            "WHERE peak_method='receipts' ".
-            "AND (item_date >= DATE('".$testDate."') AND item_date < DATE('".$nextDate."')) " .
+            "WHERE peak_method='receipts' " .
+            "AND (item_date >= DATE('" . $testDate . "') AND item_date < DATE('" . $nextDate . "')) " .
             "AND bill_no NOT IN ('135-948-190802104651-740'," . $billNoTested . ") " .
             "ORDER BY recorddate DESC";
 //        $sqlPeakRequest = "SELECT bill_no, json_send, json_result FROM peak_prepare_to_send WHERE peak_method='receipts' AND bill_no='89-835-190610152214-275'";
         $billNoToPrepare = $entityManager->getConnection()->query($sqlPeakRequest);
         $dataPeak = json_decode($this->json($billNoToPrepare)->getContent(), true);
-//dd($dataPeak);
+
         if ($dataPeak == null || $dataPeak == []) {
             $output = ['status' => 'Error No Data'];
         } else {
@@ -73,7 +73,7 @@ class ReceiptsController extends AbstractController
 
                         foreach ($itemReceipts['products'] as $product) {
                             $insertProductItem = "INSERT INTO receipts_send_item(bill_no,item_date, product_id, quantity, product_price, send_peak_price, price) VALUES " .
-                                "('" . $exBillNo[1] . "','".$issuedDate."','" . $product['productId'] . "'," . $product['quantity'] . "," . $product['productprice'] . "," . $product['peak_price'] . "," . $product['price'] . ")";
+                                "('" . $exBillNo[1] . "','" . $issuedDate . "','" . $product['productId'] . "'," . $product['quantity'] . "," . $product['productprice'] . "," . $product['peak_price'] . "," . $product['price'] . ")";
                             $customEntityManager->getConnection()->query($insertProductItem);
                         }
                     }
@@ -97,7 +97,7 @@ class ReceiptsController extends AbstractController
 
                                 foreach ($itemReponse['products'] as $productPeak) {
                                     $insertProductPeakItem = "INSERT INTO receipts_peak_item(bill_no,item_date,peak_id, product_id, product_code, quantity, price, discount) VALUES " .
-                                        "('" . $exBillNo[1] . "',".$issuedDate.",'" . $productPeak['id'] . "','" . $productPeak['productId'] . "','" . $productPeak['productCode'] . "'," . $productPeak['quantity'] . "," . $productPeak['price'] . "," . $productPeak['discount'] . ")";
+                                        "('" . $exBillNo[1] . "'," . $issuedDate . ",'" . $productPeak['id'] . "','" . $productPeak['productId'] . "','" . $productPeak['productCode'] . "'," . $productPeak['quantity'] . "," . $productPeak['price'] . "," . $productPeak['discount'] . ")";
 
                                     $customEntityManager->getConnection()->query($insertProductPeakItem);
                                 }
@@ -143,13 +143,65 @@ class ReceiptsController extends AbstractController
     {
 //        $entityManager = $this->getDoctrine()->getManager('default');
         $customEntityManager = $this->getDoctrine()->getManager('custom');
-        $sqlPeakRequest = "SELECT * FROM receipts where result is null";
+        $sqlPeakRequest = "SELECT bill_no,amount_send,amount_peak FROM receipts where result_amount is null AND result_quantity is null";
         $billNotTest = $customEntityManager->getConnection()->query($sqlPeakRequest);
         $dataExisted = json_decode($this->json($billNotTest)->getContent(), true);
 
-//        dd($dataExisted);
-        foreach($dataExisted as $item){
-            dd($item);
+        if($dataExisted == [])
+        {
+            $output = ['status' => 'Error No data to check'];
+        } else {
+            foreach ($dataExisted as $billItem) {
+                $sendProductId = [];
+                $peakProductId = [];
+                $countSendProductQty = 0;
+                $countPeakProductQty = 0;
+                $sqlSendItem = "SELECT product_id,quantity FROM receipts_send_item " .
+                    "WHERE bill_no='" . $billItem['bill_no'] . "'";
+                $sendProductItem = $customEntityManager->getConnection()->query($sqlSendItem);
+                $products = json_decode($this->json($sendProductItem)->getContent(), true);
+
+                foreach ($products as $productItem) {
+                    if (array_key_exists($productItem['product_id'], $sendProductId)) {
+                        $sendProductId[$productItem['product_id']] += $productItem['quantity'];
+                    } else {
+                        $sendProductId[$productItem['product_id']] = 0;
+                        $sendProductId[$productItem['product_id']] += $productItem['quantity'];
+                    }
+                    $countSendProductQty += $productItem['quantity'];
+                }
+                $sqlPeakItem = "SELECT product_id,quantity FROM receipts_peak_item " .
+                    "WHERE bill_no='" . $billItem['bill_no'] . "'";
+                $peakProductItem = $customEntityManager->getConnection()->query($sqlPeakItem);
+                $peakProducts = json_decode($this->json($peakProductItem)->getContent(), true);
+
+                foreach ($peakProducts as $peakItem) {
+                    if (array_key_exists($peakItem['product_id'], $peakProductId)) {
+                        $peakProductId[$peakItem['product_id']] += $peakItem['quantity'];
+                    } else {
+                        $peakProductId[$peakItem['product_id']] = 0;
+                        $peakProductId[$peakItem['product_id']] += $peakItem['quantity'];
+
+                    }
+                    $countPeakProductQty += $productItem['quantity'];
+                }
+
+                ///////////////////////////////////////////TESTING PROCESS//////////////////////////////////////////////
+
+                if (($billItem['amount_send'] == $billItem['amount_peak']) && ($countSendProductQty == $countPeakProductQty)) {
+                    $resultQuantity = "Correct";
+                    $resultAmount = "Correct";
+                } else {
+                    $resultQuantity = "Incorrect";
+                    $resultAmount = "Incorrect";
+                }
+                ////////////////////////////////////////////////////////////////////////////////////////////////////////
+                $updateResult = "UPDATE receipts SET product_quantity=" . $countSendProductQty . ",peak_product_quantity=" . $countPeakProductQty . ",result_quantity='" . $resultQuantity . "',result_amount='" . $resultAmount . "' " .
+                    "WHERE bill_no='" . $billItem['bill_no'] . "'";
+                $customEntityManager->getConnection()->query($updateResult);
+                $output = ['status' => 'success'];
+            }
         }
+        return $this->json($output);
     }
 }
