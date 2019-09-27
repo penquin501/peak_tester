@@ -10,6 +10,10 @@ use Symfony\Component\HttpFoundation\Request;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
+use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
+use Symfony\Component\HttpClient\HttpClient;
+
+
 class ExpensesController extends AbstractController
 {
     /**
@@ -238,5 +242,36 @@ class ExpensesController extends AbstractController
         }
         return $this->json($output);
     }
-
+    /**
+     * @Route("/login_auth", name="app_login_auth")
+     * @throws TransportExceptionInterface
+     */
+    public function login_auth(Request $request)
+    {
+        $client = HttpClient::create();
+        $data = json_encode([
+            'username' => $request->request->get('username'),
+            'passcode' => $request->request->get('password')
+        ]);
+        $response = $client->request('POST', 'https://sub.whatitems.com/check/authen', [
+            'headers' => [
+                'Content-Type' => 'application/json',
+            ],
+            'body' => $data,
+        ]);
+        try {
+            $content = $response->getContent();
+            dd($content);
+            if ($content == 'false') {
+                // fail authentication with a custom error
+                $this->addFlash('error', 'ไม่พบข้อมูล');
+                return $this->redirect($this->generateUrl('app_login'));
+            }
+//            $data = $parcelMemberRepository->getMemberIdByPhoneNo($this->ZeroToDoubleSix($request->request->get('username')));
+//            $this->session->set('phoneNo', $request->request->get('username'));
+//            $this->session->set('memberId', $data[0]['memberId']);
+        } catch (TransportExceptionInterface $e) {
+        }
+        return $this->redirect($this->generateUrl('report_cod'));
+    }
 }
