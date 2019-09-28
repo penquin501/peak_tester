@@ -42,7 +42,7 @@ class InvoiceController extends AbstractController
         if ($dataPeak == null || $dataPeak == []) {
             $output = ['status' => 'Error No Data'];
         } else {
-            $amount=0;
+
             foreach ($dataPeak as $item) {
                 if ($item['peak_status'] == 'error') {
                     $result = 'Error Peak Not Response';
@@ -67,9 +67,8 @@ class InvoiceController extends AbstractController
 
                         $strShopName = $itemInvoice['tags'][3];
                         $exShopName = explode("|", $strShopName);//$exShopName[1]
-
+                        $amount=0;
                         foreach ($itemInvoice['products'] as $product) {
-//                            dd($product);
                             $insertProductItem = "INSERT INTO invoice_send_item(bill_no, item_date, product_id, quantity, price) VALUES " .
                                 "('" . $exBillNo[1] . "','" . $issueDateToDate . "','" . $product['productId'] . "'," . $product['quantity'] . "," . $product['price'] . ")";
                             $customEntityManager->getConnection()->query($insertProductItem);
@@ -140,5 +139,87 @@ class InvoiceController extends AbstractController
             $days .= $splIssueDate[$d];
         }
         return date("Y-m-d", strtotime($years . '-' . $months . '-' . $days));
+    }
+
+    /**
+     * @Route("/check/invoice/info",name="check_expenses")
+     */
+    public function checkInvoiceInfo(Request $request)
+    {
+//        $entityManager = $this->getDoctrine()->getManager('default');
+        $customEntityManager = $this->getDoctrine()->getManager('custom');
+        $sqlPeakRequest = "SELECT bill_no,amount_send,amount_peak FROM invoice where result_amount is null AND result_quantity is null LIMIT 2";
+        $billNotTest = $customEntityManager->getConnection()->query($sqlPeakRequest);
+        $dataExisted = json_decode($this->json($billNotTest)->getContent(), true);
+
+        if($dataExisted == [])
+        {
+            $output = ['status' => 'Error No data to check'];
+        } else {
+            foreach ($dataExisted as $billItem) {
+                $sendProductId = [];
+                $peakProductId = [];
+                $countSendProductQty = 0;
+                $countPeakProductQty = 0;
+                $sqlSendItem = "SELECT product_id,quantity FROM invoice_send_item " .
+                    "WHERE bill_no='" . $billItem['bill_no'] . "'";
+                $sendProductItem = $customEntityManager->getConnection()->query($sqlSendItem);
+                $products = json_decode($this->json($sendProductItem)->getContent(), true);
+
+                foreach ($products as $productItem) {
+                    if (array_key_exists($productItem['product_id'], $sendProductId)) {
+                        $sendProductId[$productItem['product_id']] += $productItem['quantity'];
+                    } else {
+                        $sendProductId[$productItem['product_id']] = 0;
+                        $sendProductId[$productItem['product_id']] += $productItem['quantity'];
+                    }
+                }
+                foreach($sendProductId as $k =>$v){
+                    if($k != 'f1a7af69-d5d0-4fa9-a0b0-828c2e95ceb6' && $k != '3655ca65-b17a-433d-9661-b1e61ea50834'){
+                        $countSendProductQty += $v;
+                    }
+                }
+
+                $sqlPeakItem = "SELECT product_code,quantity FROM invoice_peak_item " .
+                    "WHERE bill_no='" . $billItem['bill_no'] . "'";
+                $peakProductItem = $customEntityManager->getConnection()->query($sqlPeakItem);
+                $peakProducts = json_decode($this->json($peakProductItem)->getContent(), true);
+                foreach ($peakProducts as $peakItem) {
+                    if (array_key_exists($peakItem['product_code'], $peakProductId)) {
+                        $peakProductId[$peakItem['product_code']] += $peakItem['quantity'];
+                    } else {
+                        $peakProductId[$peakItem['product_code']] = 0;
+                        $peakProductId[$peakItem['product_code']] += $peakItem['quantity'];
+
+                    }
+                }
+                foreach($peakProductId as $k =>$v){
+                    if($k != '191771' && $k != '191772'){
+                        $countPeakProductQty += $v;
+                    }
+                }
+                ///////////////////////////////////////////TESTING PROCESS//////////////////////////////////////////////
+
+                if (($billItem['amount_send'] == $billItem['amount_peak']) && ($countSendProductQty == $countPeakProductQty)) {
+                    $resultQuantity = "Correct";
+                    $resultAmount = "Correct";
+                } else if(($billItem['amount_send'] == $billItem['amount_peak']) && ($countSendProductQty != $countPeakProductQty)) {
+                    $resultQuantity = "Incorrect";
+                    $resultAmount = "Correct";
+                } elseif(($billItem['amount_send'] != $billItem['amount_peak']) && ($countSendProductQty == $countPeakProductQty)){
+                    $resultQuantity = "Correct";
+                    $resultAmount = "Incorrect";
+                } else {
+                    $resultQuantity = "Incorrect";
+                    $resultAmount = "Incorrect";
+                }
+                ////////////////////////////////////////////////////////////////////////////////////////////////////////
+                $updateResult = "UPDATE invoice SET product_quantity=" . $countSendProductQty . ",peak_product_quantity=" . $countPeakProductQty . ",result_quantity='" . $resultQuantity . "',result_amount='" . $resultAmount . "' " .
+                    "WHERE bill_no='" . $billItem['bill_no'] . "'";
+                $customEntityManager->getConnection()->query($updateResult);
+                $output = ['status' => 'success'];
+            }
+        }
+        return $this->json($output);
     }
 }

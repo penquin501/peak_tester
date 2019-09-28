@@ -192,6 +192,12 @@ class ReceiptsController extends AbstractController
                 if (($billItem['amount_send'] == $billItem['amount_peak']) && ($countSendProductQty == $countPeakProductQty)) {
                     $resultQuantity = "Correct";
                     $resultAmount = "Correct";
+                } else if(($billItem['amount_send'] == $billItem['amount_peak']) && ($countSendProductQty != $countPeakProductQty)) {
+                    $resultQuantity = "Incorrect";
+                    $resultAmount = "Correct";
+                } elseif(($billItem['amount_send'] != $billItem['amount_peak']) && ($countSendProductQty == $countPeakProductQty)){
+                    $resultQuantity = "Correct";
+                    $resultAmount = "Incorrect";
                 } else {
                     $resultQuantity = "Incorrect";
                     $resultAmount = "Incorrect";
