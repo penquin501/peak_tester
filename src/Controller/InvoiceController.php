@@ -148,7 +148,7 @@ class InvoiceController extends AbstractController
     {
 //        $entityManager = $this->getDoctrine()->getManager('default');
         $customEntityManager = $this->getDoctrine()->getManager('custom');
-        $sqlPeakRequest = "SELECT bill_no,amount_send,amount_peak FROM invoice where result_amount is null AND result_quantity is null LIMIT 2";
+        $sqlPeakRequest = "SELECT bill_no,amount_send,amount_peak FROM invoice where result_amount is null AND result_quantity is null";
         $billNotTest = $customEntityManager->getConnection()->query($sqlPeakRequest);
         $dataExisted = json_decode($this->json($billNotTest)->getContent(), true);
 
