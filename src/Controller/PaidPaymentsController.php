@@ -13,6 +13,7 @@ class PaidPaymentsController extends AbstractController
      */
     public function checkPaidPayments(Request $request)
     {
+        $output=[];
         $entityManager = $this->getDoctrine()->getManager('default');
         $customEntityManager = $this->getDoctrine()->getManager('custom');
         $sqlPeakRequest = "SELECT bill_no, json_send, json_result " .
@@ -25,9 +26,9 @@ class PaidPaymentsController extends AbstractController
             $dataJsonSend = json_decode($item['json_send'], true);
             $dataJsonPeak = json_decode($item['json_result'], true);
 dd($dataJsonSend['PeakPaidPayments']['payments']);
-            foreach ($dataJsonSend['PeakPaidPayments']['payments'] as $itemPaidPayment) {
-
-            }
+//            foreach ($dataJsonSend['PeakPaidPayments']['payments'] as $itemPaidPayment) {
+//
+//            }
 
         }
 

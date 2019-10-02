@@ -117,15 +117,19 @@ class ExpensesController extends AbstractController
                     if ($dataJsonPeak == '' || !is_array($dataJsonPeak)) {
                         $insertQuery = "INSERT INTO expenses(code, issued_date, bill_no, mer_id, shop_name, amount_send,peak_due_date,record_date) " .
                             "VALUES ('" . $code . "','" . $issueDateToDate . "','" . $exBillNo[1] . "'," . $merId[0] . ",'" . $exShopName[1] . "'," . $amount . ",'" . $dueDateToDate . "',CURRENT_TIMESTAMP())";
+                        $customEntityManager->getConnection()->query($insertQuery);
                     } elseif ($dataJsonPeak['PeakExpenses']['resCode'] != 200) {
 //                        $peakResDescResult = $dataJsonPeak['PeakExpenses']['resDesc'];
                         $insertQuery = "INSERT INTO expenses(code, issued_date, bill_no,mer_id, shop_name, amount_send,peak_due_date,peak_res_code,peak_res_desc,record_date) " .
                             "VALUES ('" . $code . "','" . $issueDateToDate . "','" . $exBillNo[1] . "'," . $merId[0] . ",'" . $exShopName[1] . "'," . $amount . ",'" . $dueDateToDate . "','" . $dataJsonPeak['PeakExpenses']['resCode'] . "','" . $dataJsonPeak['PeakExpenses']['resDesc'] . "',CURRENT_TIMESTAMP()";
+                        $customEntityManager->getConnection()->query($insertQuery);
                     } else {
                         foreach ($dataJsonPeak['PeakExpenses']['expenses'] as $itemReponse) {
+//                            dd($itemReponse);
                             if ($itemReponse['resCode'] != 200) {
                                 $insertQuery = "INSERT INTO expenses(code, issued_date, bill_no,mer_id, shop_name, amount_send,peak_due_date,peak_res_code,peak_res_desc,peak_code,peak_desc,record_date) " .
                                     "VALUES ('" . $code . "','" . $issueDateToDate . "','" . $exBillNo[1] . "'," . $merId[0] . ",'" . $exShopName[1] . "'," . $amount . ",'" . $dueDateToDate . "','" . $dataJsonPeak['PeakExpenses']['resCode'] . "','" . $dataJsonPeak['PeakExpenses']['resDesc'] . "','" . $itemReponse['resCode'] . "','" . $itemReponse['resDesc'] . "',CURRENT_TIMESTAMP())";
+                                $customEntityManager->getConnection()->query($insertQuery);
                             } else {
 
                                 $status = $itemReponse['status'];
@@ -135,19 +139,20 @@ class ExpensesController extends AbstractController
                                 foreach ($itemReponse['products'] as $productPeak) {
 //                                    dd($productPeak);
                                     $insertProductPeakItem = "INSERT INTO expenses_peak_item(bill_no, item_date, peak_id, account_sub_id, quantity, price, discount) VALUES " .
-                                        "('" . $exBillNo[1] . "'," . $issuedDate . ",'" . $productPeak['id'] . "','" . $productPeak['accountSubId'] . "'," . $productPeak['quantity'] . "," . $productPeak['price'] . "," . $productPeak['discount'] . ")";
+                                        "('" . $exBillNo[1] . "'," . $issuedDate . ",'" . $productPeak['id'] . "','" . $productPeak['accountCode'] . "'," . $productPeak['quantity'] . "," . $productPeak['price'] . "," . $productPeak['discount'] . ")";
 
                                     $customEntityManager->getConnection()->query($insertProductPeakItem);
                                 }
                                 $insertQuery = "INSERT INTO expenses(code, issued_date, bill_no,mer_id, shop_name, amount_send,amount_peak,peak_due_date,peak_res_code,peak_res_desc,peak_code,peak_desc,peak_status,peak_online_link,record_date) " .
                                     "VALUES ('" . $code . "','" . $issueDateToDate . "','" . $exBillNo[1] . "'," . $merId[0] . ",'" . $exShopName[1] . "'," . $amount . "," . $paymentAmount . ",'" . $dueDateToDate . "','" . $dataJsonPeak['PeakExpenses']['resCode'] . "','" . $dataJsonPeak['PeakExpenses']['resDesc'] . "','" . $itemReponse['resCode'] . "','" . $itemReponse['resDesc'] . "','" . $status . "','" . $onlineViewLink . "',CURRENT_TIMESTAMP())";
 
+                                $customEntityManager->getConnection()->query($insertQuery);
                                 $output = ['status' => 'SUCCESS'];
                             }
 
                         }
                     }
-                    $customEntityManager->getConnection()->query($insertQuery);
+//                    $customEntityManager->getConnection()->query($insertQuery);
                 }
 
             }
@@ -248,6 +253,7 @@ class ExpensesController extends AbstractController
         }
         return $this->json($output);
     }
+
     /**
      * @Route("/login_auth", name="app_login_auth")
      * @throws TransportExceptionInterface
