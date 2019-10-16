@@ -175,11 +175,10 @@ class InvoiceController extends AbstractController
                     }
                 }
                 foreach($sendProductId as $k =>$v){
-                    if($k != 'f1a7af69-d5d0-4fa9-a0b0-828c2e95ceb6' && $k != '3655ca65-b17a-433d-9661-b1e61ea50834'){
+                    if($k != 'ed00c17d-b079-486f-8e78-34d736ac6adf' && $k != '9761ae0d-2f9a-4cb3-bd59-b8e3329c4aa5'){
                         $countSendProductQty += $v;
                     }
                 }
-
                 $sqlPeakItem = "SELECT product_code,quantity FROM invoice_peak_item " .
                     "WHERE bill_no='" . $billItem['bill_no'] . "'";
                 $peakProductItem = $customEntityManager->getConnection()->query($sqlPeakItem);
