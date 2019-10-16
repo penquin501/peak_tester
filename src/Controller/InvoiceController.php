@@ -34,7 +34,7 @@ class InvoiceController extends AbstractController
             "FROM peak_prepare_to_send " .
             "WHERE peak_method='invoice' " .
             "AND (item_date>=DATE('" . $testDate . "') and item_date<DATE('" . $nextDate . "')) " .
-//            "AND bill_no NOT IN (" . $billNoTested . ")" .
+            "AND bill_no NOT IN (" . $billNoTested . ")" .
             "ORDER BY recorddate DESC";
         $billNoToPrepare = $entityManager->getConnection()->query($sqlPeakRequest);
         $dataPeak = json_decode($this->json($billNoToPrepare)->getContent(), true);
