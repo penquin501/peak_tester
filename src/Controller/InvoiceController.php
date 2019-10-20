@@ -76,7 +76,6 @@ class InvoiceController extends AbstractController
                         }
 
                     }
-//                    dd($amount);
                     if ($dataJsonPeak == '' || !is_array($dataJsonPeak)) {
                         $insertQuery = "INSERT INTO invoice(code, issued_date, bill_no, mer_id, shop_name, amount_send,peak_due_date,record_date) " .
                             "VALUES ('" . $code . "','" . $issueDateToDate . "','" . $exBillNo[1] . "'," . $merId[0] . ",'" . $exShopName[1] . "'," . $amount . ",'" . $dueDateToDate . "',CURRENT_TIMESTAMP())";
