@@ -53,20 +53,20 @@ class InvoiceController extends AbstractController
                     $dataJsonSend = json_decode($item['json_send'], true);
                     $dataJsonPeak = json_decode($item['json_result'], true);
                     foreach ($dataJsonSend['PeakInvoices']['invoices'] as $itemInvoice) {
-//                        dd($itemInvoice);
                         $code = $itemInvoice['code'];//code
                         $issuedDate = $itemInvoice['issuedDate'];
                         $dueDate = $itemInvoice['dueDate'];
                         $issueDateToDate = $this->convertStrToDate($issuedDate);
                         $dueDateToDate = $this->convertStrToDate($dueDate);
 
-                        $strBillNo = $itemInvoice['tags'][1];
+                        $strBillNo = $itemInvoice['tags'][2];
                         $exBillNo = explode("|", $strBillNo);//$exBillNo[1]
 
                         $merId = explode("-", $exBillNo[1]);//$merId[0]
 
-                        $strShopName = $itemInvoice['tags'][3];
+                        $strShopName = $itemInvoice['tags'][4];
                         $exShopName = explode("|", $strShopName);//$exShopName[1]
+
                         $amount=0;
                         foreach ($itemInvoice['products'] as $product) {
                             $insertProductItem = "INSERT INTO invoice_send_item(bill_no, item_date, product_id, quantity, price) VALUES " .
@@ -99,7 +99,6 @@ class InvoiceController extends AbstractController
                                 $onlineViewLink = $itemReponse['onlineViewLink'];
 
                                 foreach ($itemReponse['products'] as $productPeak) {
-//                                    dd($productPeak);
                                     $insertProductPeakItem = "INSERT INTO invoice_peak_item(bill_no, item_date, peak_id, product_id, product_code, quantity, price, discount) VALUES " .
                                         "('" . $exBillNo[1] . "'," . $issuedDate . ",'" . $productPeak['id'] . "','" . $productPeak['productId'] . "','".$productPeak['productCode']."'," . $productPeak['quantity'] . "," . $productPeak['price'] . "," . $productPeak['discount'] . ")";
 

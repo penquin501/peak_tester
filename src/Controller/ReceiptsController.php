@@ -65,13 +65,12 @@ class ReceiptsController extends AbstractController
                         $strBillNo = $itemReceipts['tags'][1];
                         $exBillNo = explode("|", $strBillNo);//$exBillNo[1]
 
-                        $merId = explode("-", $exBillNo[1]);//merId[0]
+                        $merId = explode("-", $exBillNo[1]);//$merId[0]
 
                         $strShopName = $itemReceipts['tags'][3];
                         $exShopName = explode("|", $strShopName);//$exShopName[1]
 
                         $amount = $itemReceipts['paidPayments']['payments'][0]['amount'];
-
                         foreach ($itemReceipts['products'] as $product) {
                             $insertProductItem = "INSERT INTO receipts_send_item(bill_no,item_date, product_id, quantity, product_price, send_peak_price, price) VALUES " .
                                 "('" . $exBillNo[1] . "','" . $issuedDate . "','" . $product['productId'] . "'," . $product['quantity'] . "," . $product['productprice'] . "," . $product['peak_price'] . "," . $product['price'] . ")";
